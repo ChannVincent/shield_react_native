@@ -21,6 +21,10 @@ type Post = {
   id: string;
   text: string;
   image: string | null;
+  dimensions?: {
+    width: number;
+    height: number;
+  };
 };
 
 function ProfileScreen() {
@@ -44,7 +48,20 @@ function ProfileScreen() {
 function HomeScreen() {
   const [text, setText] = useState<string>("");
   const [image, setImage] = useState<string | null>(null);
+  const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number } | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
+
+  const calculateImageDimensions = (uri: string, callback: (dimensions: { width: number; height: number }) => void) => {
+    Image.getSize(
+      uri,
+      (width, height) => {
+        const screenWidth = 300; // Fixed width for images
+        const calculatedHeight = (screenWidth / width) * height;
+        callback({ width: screenWidth, height: calculatedHeight });
+      },
+      (error) => console.error("Error getting image size: ", error)
+    );
+  };
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -54,7 +71,9 @@ function HomeScreen() {
     });
 
     if (!result.canceled) {
-      setImage(result.assets[0].uri);
+      const uri = result.assets[0].uri;
+      setImage(uri);
+      calculateImageDimensions(uri, setImageDimensions);
     }
   };
 
@@ -71,7 +90,9 @@ function HomeScreen() {
     });
 
     if (!result.canceled) {
-      setImage(result.assets[0].uri);
+      const uri = result.assets[0].uri;
+      setImage(uri);
+      calculateImageDimensions(uri, setImageDimensions);
     }
   };
 
@@ -80,26 +101,39 @@ function HomeScreen() {
       alert("Please enter some text to post.");
       return;
     }
-
-    Alert.alert("Confirm Post", "Are you sure you want to post this?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Post",
-        onPress: () => {
-          setPosts((prevPosts) => [
-            { id: Date.now().toString(), text, image },
-            ...prevPosts,
-          ]);
-          setText("");
-          setImage(null);
-        },
-      },
-    ]);
+  
+    if (image) {
+      calculateImageDimensions(image, (dimensions) => {
+        setPosts((prevPosts) => [
+          { id: Date.now().toString(), text, image, dimensions },
+          ...prevPosts,
+        ]);
+        setText("");
+        setImage(null);
+        setImageDimensions(null);
+      });
+    } else {
+      setPosts((prevPosts) => [
+        { id: Date.now().toString(), text, image: null, dimensions: undefined },
+        ...prevPosts,
+      ]);
+      setText("");
+      setImage(null);
+    }
   };
 
   const renderPost = ({ item }: { item: Post }) => (
     <View style={styles.post}>
-      {item.image && <Image source={{ uri: item.image }} style={styles.postImage} />}
+      {item.image && item.dimensions && (
+        <Image
+          source={{ uri: item.image }}
+          style={{
+            width: item.dimensions.width,
+            height: item.dimensions.height,
+            borderRadius: 5,
+          }}
+        />
+      )}
       <Text>{item.text}</Text>
     </View>
   );
@@ -132,9 +166,17 @@ function HomeScreen() {
                   <FontAwesome name="send" size={24} color="blue" />
                 </TouchableOpacity>
               </View>
-              {image && <Image source={{ uri: image }} style={styles.previewImage} />}
+              {image && imageDimensions && (
+                <Image
+                  source={{ uri: image }}
+                  style={{
+                    width: imageDimensions.width,
+                    height: imageDimensions.height,
+                    borderRadius: 5,
+                  }}
+                />
+              )}
             </View>
-            {/* Spacer under the post form */}
             <View style={{ height: 20 }} />
           </View>
         }
@@ -212,7 +254,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
 
-  
+
   title: {
     fontSize: 24,
     fontWeight: "bold",
