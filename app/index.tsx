@@ -59,17 +59,17 @@ function HomeScreen() {
   };
 
   const takePhoto = async () => {
-    const { status } = await ImagePicker.requestCameraPermissionsAsync(); // Request permissions
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== "granted") {
       alert("Camera permission is required!");
       return;
     }
-  
+
     const result = await ImagePicker.launchCameraAsync({
       allowsEditing: true,
       quality: 1,
     });
-  
+
     if (!result.canceled) {
       setImage(result.assets[0].uri);
     }
@@ -106,30 +106,38 @@ function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.card}>
-        <TextInput
-          style={styles.textInput}
-          placeholder="What's on your mind?"
-          value={text}
-          onChangeText={setText}
-        />
-        <View style={styles.iconRow}>
-          <TouchableOpacity onPress={pickImage}>
-            <FontAwesome name="image" size={24} color="gray" />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={takePhoto}>
-            <FontAwesome name="camera" size={24} color="gray" />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={confirmPost}>
-            <FontAwesome name="send" size={24} color="blue" />
-          </TouchableOpacity>
-        </View>
-        {image && <Image source={{ uri: image }} style={styles.previewImage} />}
-      </View>
       <FlatList
         data={posts}
         keyExtractor={(item) => item.id}
         renderItem={renderPost}
+        style={styles.flatList}
+        contentContainerStyle={styles.flatListContent}
+        ListHeaderComponent={
+          <View>
+            <View style={styles.card}>
+              <TextInput
+                style={styles.textInput}
+                placeholder="What's on your mind?"
+                value={text}
+                onChangeText={setText}
+              />
+              <View style={styles.iconRow}>
+                <TouchableOpacity onPress={pickImage}>
+                  <FontAwesome name="image" size={24} color="gray" />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={takePhoto}>
+                  <FontAwesome name="camera" size={24} color="gray" />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={confirmPost}>
+                  <FontAwesome name="send" size={24} color="blue" />
+                </TouchableOpacity>
+              </View>
+              {image && <Image source={{ uri: image }} style={styles.previewImage} />}
+            </View>
+            {/* Spacer under the post form */}
+            <View style={{ height: 20 }} />
+          </View>
+        }
       />
     </View>
   );
@@ -147,20 +155,16 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
     backgroundColor: "#f0f0f0",
   },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 20,
+  flatList: {
+    flex: 1,
+    // No margin or padding to keep the scrollbar at the screen's edge
   },
-  input: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 5,
-    padding: 10,
-    marginBottom: 20,
+  flatListContent: {
+    paddingTop: 20, // Top margin for content
+    paddingBottom: 20, // Bottom margin for content
+    paddingHorizontal: 15, // Left and right margins for content
   },
   card: {
     backgroundColor: "#fff",
@@ -206,6 +210,20 @@ const styles = StyleSheet.create({
     height: 200,
     borderRadius: 5,
     marginBottom: 10,
+  },
+
+  
+  title: {
+    fontSize: 24,
+    fontWeight: "bold",
+    marginBottom: 20,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 5,
+    padding: 10,
+    marginBottom: 20,
   },
   saveButton: {
     backgroundColor: "blue",
