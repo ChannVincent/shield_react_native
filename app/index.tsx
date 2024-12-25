@@ -3,15 +3,19 @@ import {
   Text,
   View,
   TextInput,
-  Button,
   FlatList,
   Image,
   TouchableOpacity,
   StyleSheet,
+  Alert,
 } from "react-native";
 import { createDrawerNavigator } from "@react-navigation/drawer";
 import { NavigationContainer } from "@react-navigation/native";
 import * as ImagePicker from "expo-image-picker";
+import { FontAwesome } from "@expo/vector-icons";
+import * as Camera from "expo-camera";
+
+const Drawer = createDrawerNavigator();
 
 type Post = {
   id: string;
@@ -19,26 +23,24 @@ type Post = {
   image: string | null;
 };
 
-type RootStackParamList = {
-  Home: undefined;
-  Profile: undefined;
-};
-
-const Drawer = createDrawerNavigator<RootStackParamList>();
-
-// Profile Screen
 function ProfileScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Profile</Text>
-      <TextInput placeholder="Name" style={styles.input} />
-      <TextInput placeholder="Email" style={styles.input} />
-      <Button title="Save Changes" onPress={() => alert("Profile updated!")} />
+      <View style={styles.card}>
+        <TextInput placeholder="Name" style={styles.input} />
+        <TextInput placeholder="Email" style={styles.input} />
+        <TouchableOpacity
+          style={styles.saveButton}
+          onPress={() => alert("Profile updated!")}
+        >
+          <Text style={styles.buttonText}>Save Changes</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
 
-// Home Screen
 function HomeScreen() {
   const [text, setText] = useState<string>("");
   const [image, setImage] = useState<string | null>(null);
@@ -56,47 +58,73 @@ function HomeScreen() {
     }
   };
 
-  const addPost = () => {
-    if (text || image) {
-      setPosts((prevPosts) => [
-        { id: Date.now().toString(), text, image },
-        ...prevPosts,
-      ]);
-      setText("");
-      setImage(null);
+  const takePhoto = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync(); // Request permissions
+    if (status !== "granted") {
+      alert("Camera permission is required!");
+      return;
     }
+  
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      quality: 1,
+    });
+  
+    if (!result.canceled) {
+      setImage(result.assets[0].uri);
+    }
+  };
+
+  const confirmPost = () => {
+    if (!text.trim()) {
+      alert("Please enter some text to post.");
+      return;
+    }
+
+    Alert.alert("Confirm Post", "Are you sure you want to post this?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Post",
+        onPress: () => {
+          setPosts((prevPosts) => [
+            { id: Date.now().toString(), text, image },
+            ...prevPosts,
+          ]);
+          setText("");
+          setImage(null);
+        },
+      },
+    ]);
   };
 
   const renderPost = ({ item }: { item: Post }) => (
     <View style={styles.post}>
       {item.image && <Image source={{ uri: item.image }} style={styles.postImage} />}
       <Text>{item.text}</Text>
-      <View style={styles.postActions}>
-        <TouchableOpacity onPress={() => alert("Liked!")}>
-          <Text style={styles.actionText}>Like</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => alert("Shared!")}>
-          <Text style={styles.actionText}>Share</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => alert("Added to group!")}>
-          <Text style={styles.actionText}>Add to Group</Text>
-        </TouchableOpacity>
-      </View>
     </View>
   );
 
   return (
     <View style={styles.container}>
-      <View style={styles.postInputContainer}>
+      <View style={styles.card}>
         <TextInput
           style={styles.textInput}
           placeholder="What's on your mind?"
           value={text}
           onChangeText={setText}
         />
-        <Button title="Pick Image" onPress={pickImage} />
+        <View style={styles.iconRow}>
+          <TouchableOpacity onPress={pickImage}>
+            <FontAwesome name="image" size={24} color="gray" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={takePhoto}>
+            <FontAwesome name="camera" size={24} color="gray" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={confirmPost}>
+            <FontAwesome name="send" size={24} color="blue" />
+          </TouchableOpacity>
+        </View>
         {image && <Image source={{ uri: image }} style={styles.previewImage} />}
-        <Button title="Post" onPress={addPost} />
       </View>
       <FlatList
         data={posts}
@@ -107,7 +135,6 @@ function HomeScreen() {
   );
 }
 
-// Main Navigation
 export default function App() {
   return (
       <Drawer.Navigator>
@@ -121,7 +148,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: "#fff",
+    backgroundColor: "#f0f0f0",
   },
   title: {
     fontSize: 24,
@@ -135,8 +162,15 @@ const styles = StyleSheet.create({
     padding: 10,
     marginBottom: 20,
   },
-  postInputContainer: {
-    marginBottom: 20,
+  card: {
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    padding: 15,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   textInput: {
     borderWidth: 1,
@@ -145,16 +179,27 @@ const styles = StyleSheet.create({
     padding: 10,
     marginBottom: 10,
   },
+  iconRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 10,
+  },
   previewImage: {
-    width: 100,
-    height: 100,
+    width: "100%",
+    height: 200,
+    borderRadius: 5,
     marginBottom: 10,
   },
   post: {
     marginBottom: 20,
     padding: 15,
-    backgroundColor: "#f9f9f9",
+    backgroundColor: "#fff",
     borderRadius: 5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   postImage: {
     width: "100%",
@@ -162,12 +207,14 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     marginBottom: 10,
   },
-  postActions: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    marginTop: 10,
+  saveButton: {
+    backgroundColor: "blue",
+    padding: 10,
+    borderRadius: 5,
+    alignItems: "center",
   },
-  actionText: {
-    color: "blue",
+  buttonText: {
+    color: "white",
+    fontWeight: "bold",
   },
 });
