@@ -50,12 +50,13 @@ function HomeScreen() {
   const [image, setImage] = useState<string | null>(null);
   const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number } | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
+  const [expandedPosts, setExpandedPosts] = useState<Set<string>>(new Set()); // Tracks expanded posts
 
   const calculateImageDimensions = (uri: string, callback: (dimensions: { width: number; height: number }) => void) => {
     Image.getSize(
       uri,
       (width, height) => {
-        const screenWidth = 300; // Fixed width for images
+        const screenWidth = 300; // Example: Fixed width for images
         const calculatedHeight = (screenWidth / width) * height;
         callback({ width: screenWidth, height: calculatedHeight });
       },
@@ -101,7 +102,7 @@ function HomeScreen() {
       alert("Please enter some text to post.");
       return;
     }
-  
+
     if (image) {
       calculateImageDimensions(image, (dimensions) => {
         setPosts((prevPosts) => [
@@ -122,21 +123,46 @@ function HomeScreen() {
     }
   };
 
-  const renderPost = ({ item }: { item: Post }) => (
-    <View style={styles.post}>
-      {item.image && item.dimensions && (
-        <Image
-          source={{ uri: item.image }}
-          style={{
-            width: item.dimensions.width,
-            height: item.dimensions.height,
-            borderRadius: 5,
-          }}
-        />
-      )}
-      <Text>{item.text}</Text>
-    </View>
-  );
+  const toggleExpand = (id: string) => {
+    setExpandedPosts((prevExpanded) => {
+      const newSet = new Set(prevExpanded);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
+  const renderPost = ({ item }: { item: Post }) => {
+    const isExpanded = expandedPosts.has(item.id);
+    const maxHeight = 200; // Limit initial height for long images
+
+    return (
+      <View style={styles.post}>
+        {item.image && item.dimensions && (
+          <View>
+            <Image
+              source={{ uri: item.image }}
+              style={{
+                width: "100%",
+                height: isExpanded ? item.dimensions.height : Math.min(maxHeight, item.dimensions.height),
+                borderRadius: 5,
+                overflow: "hidden",
+              }}
+            />
+            {item.dimensions.height > maxHeight && (
+              <TouchableOpacity onPress={() => toggleExpand(item.id)}>
+                <Text style={styles.expandText}>{isExpanded ? "Collapse ▲" : "Expand ▼"}</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+        <Text>{item.text}</Text>
+      </View>
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -185,6 +211,7 @@ function HomeScreen() {
   );
 }
 
+
 export default function App() {
   return (
       <Drawer.Navigator>
@@ -195,6 +222,12 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
+  expandText: {
+    color: "blue",
+    textAlign: "center",
+    marginTop: 5,
+    fontSize: 16,
+  },
   container: {
     flex: 1,
     backgroundColor: "#f0f0f0",
